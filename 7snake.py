@@ -7,9 +7,8 @@ pos_avail = []
 sum_snk = []
 snk = []
 snks = []
-vsnk = [0, 0, 0, 0, 0, 0, 0]
-var_end = 0
-t_pot = []
+v_snk = [0, 0, 0, 0, 0, 0, 0]
+var_end = False
 
 file = sys.argv[1]
 
@@ -22,7 +21,8 @@ n_cols = len(matrix_rs[0])
 
 pos_avail = [(j, i) for j in range(n_cols) for i in range(n_rows)]
 
-def getAdjacent(cell, variant, i_cell=(0,0)):
+def get_adjacent(cell, variant, i_cell=(0,0)):
+    global pos_avail, snk, n_cols, n_rows
     if (cell[1] + 1 < n_cols) and ((cell[0], cell[1] + 1) in pos_avail) and not ((cell[0], cell[1] + 1) in snk) and variant == 1:
         return (cell[0], cell[1] + 1)
     elif (cell[0] + 1 < n_rows) and ((cell[0] + 1, cell[1]) in pos_avail) and not ((cell[0] + 1, cell[1]) in snk) and variant == 2:
@@ -34,7 +34,7 @@ def getAdjacent(cell, variant, i_cell=(0,0)):
     else:
         return -1
 
-def findDupsSum(seq, item):
+def find_dups_sum(seq, item):
     st = -1
     lis_dup = []
     while True:
@@ -48,44 +48,42 @@ def findDupsSum(seq, item):
     return lis_dup
 
         
-def removeFromList(cell):
+def remove_from_list(cell):
+    global pos_avail
     while cell in pos_avail:
         pos_avail.remove(cell)
 
-def addSnake():
+def add_snake():
+    global matrix_rs, sum_snk, snk, snks
     sum = 0
     snks.append(list(snk))
     for ind in snk:
         sum = sum + matrix_rs[ind[0]][ind[1]]
     sum_snk.append(sum)
 
-def generateAllSnakes():
-    i = 0
-    global var_end
-    global vsnk
+def generate_all_snakes():
+    global var_end, snk, v_snk, pos_avail, n_rows, n_cols
     if not snk:
         for _ in range(7):
             snk.append(0)
             
     for row in tqdm(range(n_rows)):
         for col in range(n_cols):
-            vsnk = [0, 0, 0, 0, 0, 0, 0]
+            v_snk = [0, 0, 0, 0, 0, 0, 0]
             snk[0] = (row, col)
             if snk[0] in pos_avail:
-                removeFromList(snk[0])
-            generateSections(1)
-            if var_end == 1:
+                remove_from_list(snk[0])
+            generate_sections(1)
+            if var_end:
                 break
-            addSnake()
-            t_pot.append(len(pos_avail))
-            while var_end != 1:
-                generateSections()
-                if var_end != 1:
-                    addSnake()
-                    t_pot.append(len(pos_avail))
+            add_snake()
+            while not var_end:
+                generate_sections()
+                if not var_end:
+                    add_snake()
                 else:
                     break
-            var_end = 0
+            var_end = False
             for it in snk:
                 if it != 0 and not it in pos_avail:
                     pos_avail.append(it)
@@ -93,45 +91,45 @@ def generateAllSnakes():
         for it in snk:
             if it != 0 and not it in pos_avail:
                 pos_avail.append(it)
-        var_end = 0
+        var_end = False
         
-def generateSections(seg=6):
-    global var_end
-    global vsnk
-    if vsnk[seg] < 4 :
-        vsnk[seg] = vsnk[seg] + 1
-        cell = getAdjacent(snk[seg - 1], vsnk[seg], snk[0])
+def generate_sections(seg=6):
+    global var_end, v_snk, pos_avail, snk
+    if v_snk[seg] < 4 :
+        v_snk[seg] = v_snk[seg] + 1
+        cell = get_adjacent(snk[seg - 1], v_snk[seg], snk[0])
         if cell != -1:
             if snk[seg] != 0 and not snk[seg] in pos_avail:
                 pos_avail.append(snk[seg])
             snk[seg] = cell
-            removeFromList(cell)
+            remove_from_list(cell)
             if seg + 1 <= 6:
-                vsnk[seg + 1] = 0
-                generateSections(seg + 1)
+                v_snk[seg + 1] = 0
+                generate_sections(seg + 1)
         else:
-            generateSections(seg)
+            generate_sections(seg)
     else:
         if seg - 1 > 0:
             if snk[seg] != 0 and not snk[seg] in pos_avail:
                 pos_avail.append(snk[seg])
                 snk[seg] = 0
-            generateSections(seg - 1)
+            generate_sections(seg - 1)
         else:
-            var_end = 1
+            var_end = True
 
 def main():
-    generateAllSnakes()
+    global sum_snk, snks
+    generate_all_snakes()
     sn7_1 = []
     sn7_2 = []
-    for it_sum in tqdm(sum_snk):
-        indx = findDupsSum(sum_snk, it_sum)
-        for num, index in tqdm(enumerate(indx)):
-            for num2 in indx[index:]:
-                var = set(snks[num]) & set(snks[num2])
+    for it_sum in sum_snk:
+        indx = find_dups_sum(sum_snk, it_sum)
+        for cell, index in enumerate(indx):
+            for cell_b in indx[index:]:
+                var = set(snks[cell]) & set(snks[cell_b])
                 if not var:
-                    sn7_1 = snks[num]
-                    sn7_2 = snks[num2]
+                    sn7_1 = snks[cell]
+                    sn7_2 = snks[cell_b]
                     break
             if sn7_1 and sn7_2:
                 break
@@ -140,8 +138,8 @@ def main():
     if not sn7_1 or not sn7_2:
         print('FAIL')
     else:
-        print(sn7_1)
-        print(sn7_2)
+        print('Snake A: ' + str(sn7_1))
+        print('Snake B: ' + str(sn7_2))
     
 if __name__ == '__main__':
     main()
